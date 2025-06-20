@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>UTF-8 Confusables & Homoglyph Inspector | Punycode Security Tool</title>
+    <meta name="description" content="Detect and analyze visually confusable Unicode characters (homoglyphs) to prevent phishing and IDN homograph attacks. An offline-first Unicode security tool.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#020617">
+
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
+
+    <link rel="canonical" href="https://opensecurity.github.io/confusables-inspector/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://opensecurity.github.io/confusables-inspector/">
+    <meta property="og:title" content="UTF-8 Confusables & Homoglyph Inspector | Punycode Security Tool">
+    <meta property="og:description" content="Detect and analyze visually confusable Unicode characters (homoglyphs) to prevent phishing and IDN homograph attacks. An offline-first Unicode security tool.">
+    <meta property="og:site_name" content="Confusables Inspector">
+
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://opensecurity.github.io/confusables-inspector/">
+    <meta property="twitter:title" content="UTF-8 Confusables & Homoglyph Inspector | Punycode Security Tool">
+    <meta property="twitter:description" content="Detect and analyze visually confusable Unicode characters (homoglyphs) to prevent phishing and IDN homograph attacks. An offline-first Unicode security tool.">
+
+    <style>
+        :root {
+            --color-background: #020617;
+            --color-surface: #0f172a;
+            --color-surface-muted: #1e293b;
+            --color-foreground: #e2e8f0;
+            --color-foreground-muted: #94a3b8;
+            --color-border: #334155;
+            --color-input: #1e293b;
+            --color-primary: #38bdf8;
+            --color-primary-hover: #7dd3fc;
+            --color-primary-foreground: #020617;
+            --color-destructive: #f43f5e;
+            --color-destructive-muted: rgba(244, 63, 94, 0.1);
+            --color-warning: #facc15;
+            --color-success: #34d399;
+            --color-success-muted: rgba(52, 211, 153, 0.1);
+            --radius: 0.5rem;
+            --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            color-scheme: dark;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--color-background);
+            color: var(--color-foreground);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            padding: 1rem;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        .inspector-container {
+            max-width: 800px;
+            margin: 2rem auto;
+        }
+
+        .inspector-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .inspector-header h1 {
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            background: linear-gradient(to right, #e0e7ff, #7dd3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .inspector-header p {
+            color: var(--color-foreground-muted);
+            font-size: clamp(1rem, 2.5vw, 1.125rem);
+            margin-top: 0.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .examples-container {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .examples-container p {
+            color: var(--color-foreground-muted);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .example-button {
+            padding: 0.5rem 1rem;
+            background-color: var(--color-surface-muted);
+            border: 1px solid var(--color-border);
+            color: var(--color-foreground-muted);
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .example-button:hover,
+        .example-button:focus {
+            background-color: var(--color-border);
+            color: var(--color-foreground);
+            border-color: var(--color-primary);
+            outline: none;
+        }
+
+        .input-section form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .input-section textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            background-color: var(--color-input);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            color: var(--color-foreground);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-section textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .input-section button {
+            align-self: flex-start;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--color-primary);
+            color: var(--color-primary-foreground);
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .input-section button:hover {
+            background-color: var(--color-primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .input-section button:active {
+            transform: translateY(0);
+        }
+
+        .result-section {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .result-section .card {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            margin-bottom: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-foreground);
+        }
+
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .card-subtitle {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--color-foreground-muted);
+        }
+
+        .safe-result-card {
+            border-color: var(--color-success);
+            background-image: radial-gradient(var(--color-success-muted) 1px, transparent 1px);
+            background-size: 1rem 1rem;
+        }
+
+        .safe-result-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .safe-result-content .icon {
+            color: var(--color-success);
+            width: 48px;
+            height: 48px;
+        }
+
+        .safe-result-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--color-success);
+        }
+
+        .safe-result-content .analyzed-string {
+            font-family: var(--font-mono);
+            word-break: break-all;
+            color: var(--color-foreground-muted);
+            background-color: var(--color-surface-muted);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+        }
+
+        .danger-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            border-radius: var(--radius);
+            background-color: var(--color-destructive-muted);
+            border: 1px solid var(--color-destructive);
+        }
+
+        .danger-alert .icon {
+            color: var(--color-destructive);
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .danger-alert-text strong {
+            color: var(--color-foreground);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .danger-alert-text p {
+            color: var(--color-foreground-muted);
+            line-height: 1.5;
+        }
+
+        .punycode-display {
+            padding: 0.75rem 1rem;
+            background-color: var(--color-input);
+            border-radius: var(--radius);
+            border: 1px solid var(--color-border);
+        }
+
+        .punycode-display code {
+            font-family: var(--font-mono);
+            color: var(--color-primary);
+            word-break: break-all;
+        }
+
+        .risk-score-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: var(--color-surface-muted);
+            border-radius: calc(var(--radius) - 2px);
+        }
+
+        .risk-score {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .risk-score[data-risk-level="low"] {
+            color: var(--color-warning);
+        }
+
+        .risk-score[data-risk-level="medium"] {
+            color: var(--color-warning);
+        }
+
+        .risk-score[data-risk-level="high"] {
+            color: var(--color-destructive);
+        }
+
+        .risk-description {
+            color: var(--color-foreground-muted);
+        }
+
+        .highlighted-string {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            line-height: 1.7;
+            word-break: break-all;
+            background-color: var(--color-input);
+            padding: 1rem;
+            border-radius: calc(var(--radius) - 2px);
+            border: 1px solid var(--color-border);
+        }
+
+        .confusable-char {
+            position: relative;
+            background-color: rgba(244, 63, 94, 0.2);
+            outline: 1px solid var(--color-destructive);
+            border-radius: 3px;
+            padding: 0.1em 0;
+            cursor: help;
+        }
+
+        .confusable-char:focus {
+            outline: 2px solid var(--color-primary);
+        }
+
+        .confusable-char .tooltip {
+            visibility: hidden;
+            width: max-content;
+            max-width: 300px;
+            background-color: #020617;
+            color: var(--color-foreground);
+            text-align: center;
+            border-radius: var(--radius);
+            padding: 0.5rem 0.75rem;
+            position: absolute;
+            z-index: 10;
+            bottom: 130%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: all 0.3s;
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+            border: 1px solid var(--color-border);
+            pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .confusable-char .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #020617 transparent transparent transparent;
+        }
+
+        .confusable-char:hover .tooltip,
+        .confusable-char:focus .tooltip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        .confusables-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        .confusables-table th,
+        .confusables-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .confusables-table th {
+            font-family: var(--font-sans);
+            font-weight: 600;
+            color: var(--color-foreground-muted);
+            font-size: 0.875rem;
+        }
+
+        .confusables-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .char-cell {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            text-align: center;
+        }
+
+        .u-code {
+            color: var(--color-foreground-muted);
+            font-size: 0.8rem;
+        }
+
+        .diff-view {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .diff-view pre {
+            padding: 1rem;
+            border-radius: calc(var(--radius) - 2px);
+            font-family: var(--font-mono);
+            word-break: break-all;
+            white-space: pre-wrap;
+            border: 1px solid;
+        }
+
+        .diff-original {
+            background-color: var(--color-destructive-muted);
+            border-color: rgba(244, 63, 94, 0.2);
+        }
+
+        .diff-normalized {
+            background-color: var(--color-success-muted);
+            border-color: rgba(52, 211, 153, 0.2);
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem;
+            color: var(--color-foreground);
+            opacity: 0.6;
+        }
+
+        footer a {
+            color: var(--color-primary);
+            text-decoration: none;
+            transition: color var(--transition-speed);
+        }
+
+        footer a:hover {
+            color: var(--color-secondary);
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="inspector-container">
+        <header class="inspector-header">
+            <h1>Comprehensive UTF-8 Confusables Inspector</h1>
+            <p>An advanced, offline-first security tool to analyze and sanitize strings containing visually deceptive
+                Unicode characters (homoglyphs).</p>
+        </header>
+
+        <section class="examples-container">
+            <p>Click an example to see how deceptive characters are detected:</p>
+            <div class="example-buttons" id="example-buttons-container"></div>
+        </section>
+
+        <section class="input-section">
+            <form id="inspector-form">
+                <label for="input-string" class="sr-only">String to inspect</label>
+                <textarea id="input-string" name="input-string"
+                    placeholder="Paste a string here, or try an example above" required></textarea>
+                <button type="submit">Inspect String</button>
+            </form>
+        </section>
+
+        <section id="result-section" class="result-section" aria-live="polite"></section>
+    </main>
+
+    <footer>
+        <a href="https://github.com/opensecurity/confusables-inspector" target="_blank" rel="noopener noreferrer">View Project
+            on GitHub</a>
+        <span class="visually-hidden">Author: Lucian BLETAN</span>
+    </footer>
+    <script>
+        (() => {
+            const punycode = (function () {
+                // Modified from https://github.com/mathiasbynens/punycode.js
+                const module = { exports: {} };
+                (function (module) {
+                    'use strict';
+                    const maxInt = 2147483647;
+                    const base = 36;
+                    const tMin = 1;
+                    const tMax = 26;
+                    const skew = 38;
+                    const damp = 700;
+                    const initialBias = 72;
+                    const initialN = 128;
+                    const delimiter = '-';
+                    const regexPunycode = /^xn--/;
+                    const regexNonASCII = /[^\0-\x7F]/;
+                    const regexSeparators = /[\x2E\u3002\uFF0E\uFF61]/g;
+                    const errors = {
+                        'overflow': 'Overflow: input needs wider integers to process',
+                        'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
+                        'invalid-input': 'Invalid input'
+                    };
+                    const baseMinusTMin = base - tMin;
+                    const floor = Math.floor;
+                    const stringFromCharCode = String.fromCharCode;
+                    function error(type) {
+                        throw new RangeError(errors[type]);
+                    }
+                    function map(array, callback) {
+                        const result = [];
+                        let length = array.length;
+                        while (length--) {
+                            result[length] = callback(array[length]);
+                        }
+                        return result;
+                    }
+                    function mapDomain(domain, callback) {
+                        const parts = domain.split('@');
+                        let result = '';
+                        if (parts.length > 1) {
+                            result = parts[0] + '@';
+                            domain = parts[1];
+                        }
+                        domain = domain.replace(regexSeparators, '\x2E');
+                        const labels = domain.split('.');
+                        const encoded = map(labels, callback).join('.');
+                        return result + encoded;
+                    }
+                    function ucs2decode(string) {
+                        const output = [];
+                        let counter = 0;
+                        const length = string.length;
+                        while (counter < length) {
+                            const value = string.charCodeAt(counter++);
+                            if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
+                                const extra = string.charCodeAt(counter++);
+                                if ((extra & 0xFC00) == 0xDC00) {
+                                    output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
+                                } else {
+                                    output.push(value);
+                                    counter--;
+                                }
+                            } else {
+                                output.push(value);
+                            }
+                        }
+                        return output;
+                    }
+                    const ucs2encode = codePoints => String.fromCodePoint(...codePoints);
+                    const basicToDigit = function (codePoint) {
+                        if (codePoint >= 0x30 && codePoint < 0x3A) {
+                            return 26 + (codePoint - 0x30);
+                        }
+                        if (codePoint >= 0x41 && codePoint < 0x5B) {
+                            return codePoint - 0x41;
+                        }
+                        if (codePoint >= 0x61 && codePoint < 0x7B) {
+                            return codePoint - 0x61;
+                        }
+                        return base;
+                    };
+                    const digitToBasic = function (digit, flag) {
+                        return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+                    };
+                    const adapt = function (delta, numPoints, firstTime) {
+                        let k = 0;
+                        delta = firstTime ? floor(delta / damp) : delta >> 1;
+                        delta += floor(delta / numPoints);
+                        for (; delta > baseMinusTMin * tMax >> 1; k += base) {
+                            delta = floor(delta / baseMinusTMin);
+                        }
+                        return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+                    };
+                    const decode = function (input) {
+                        const output = [];
+                        const inputLength = input.length;
+                        let i = 0;
+                        let n = initialN;
+                        let bias = initialBias;
+                        let basic = input.lastIndexOf(delimiter);
+                        if (basic < 0) {
+                            basic = 0;
+                        }
+                        for (let j = 0; j < basic; ++j) {
+                            if (input.charCodeAt(j) >= 0x80) {
+                                error('not-basic');
+                            }
+                            output.push(input.charCodeAt(j));
+                        }
+                        for (let index = basic > 0 ? basic + 1 : 0; index < inputLength;) {
+                            const oldi = i;
+                            for (let w = 1, k = base; ; k += base) {
+                                if (index >= inputLength) {
+                                    error('invalid-input');
+                                }
+                                const digit = basicToDigit(input.charCodeAt(index++));
+                                if (digit >= base) {
+                                    error('invalid-input');
+                                }
+                                if (digit > floor((maxInt - i) / w)) {
+                                    error('overflow');
+                                }
+                                i += digit * w;
+                                const t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+                                if (digit < t) {
+                                    break;
+                                }
+                                const baseMinusT = base - t;
+                                if (w > floor(maxInt / baseMinusT)) {
+                                    error('overflow');
+                                }
+                                w *= baseMinusT;
+                            }
+                            const out = output.length + 1;
+                            bias = adapt(i - oldi, out, oldi == 0);
+                            if (floor(i / out) > maxInt - n) {
+                                error('overflow');
+                            }
+                            n += floor(i / out);
+                            i %= out;
+                            output.splice(i++, 0, n);
+                        }
+                        return String.fromCodePoint(...output);
+                    };
+                    const encode = function (input) {
+                        const output = [];
+                        input = ucs2decode(input);
+                        const inputLength = input.length;
+                        let n = initialN;
+                        let delta = 0;
+                        let bias = initialBias;
+                        for (const currentValue of input) {
+                            if (currentValue < 0x80) {
+                                output.push(stringFromCharCode(currentValue));
+                            }
+                        }
+                        const basicLength = output.length;
+                        let handledCPCount = basicLength;
+                        if (basicLength) {
+                            output.push(delimiter);
+                        }
+                        while (handledCPCount < inputLength) {
+                            let m = maxInt;
+                            for (const currentValue of input) {
+                                if (currentValue >= n && currentValue < m) {
+                                    m = currentValue;
+                                }
+                            }
+                            const handledCPCountPlusOne = handledCPCount + 1;
+                            if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+                                error('overflow');
+                            }
+                            delta += (m - n) * handledCPCountPlusOne;
+                            n = m;
+                            for (const currentValue of input) {
+                                if (currentValue < n && ++delta > maxInt) {
+                                    error('overflow');
+                                }
+                                if (currentValue === n) {
+                                    let q = delta;
+                                    for (let k = base; ; k += base) {
+                                        const t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+                                        if (q < t) {
+                                            break;
+                                        }
+                                        const qMinusT = q - t;
+                                        const baseMinusT = base - t;
+                                        output.push(
+                                            stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
+                                        );
+                                        q = floor(qMinusT / baseMinusT);
+                                    }
+                                    output.push(stringFromCharCode(digitToBasic(q, 0)));
+                                    bias = adapt(delta, handledCPCountPlusOne, handledCPCount === basicLength);
+                                    delta = 0;
+                                    ++handledCPCount;
+                                }
+                            }
+                            ++delta;
+                            ++n;
+                        }
+                        return output.join('');
+                    };
+                    const toUnicode = function (input) {
+                        return mapDomain(input, function (string) {
+                            return regexPunycode.test(string)
+                                ? decode(string.slice(4).toLowerCase())
+                                : string;
+                        });
+                    };
+                    const toASCII = function (input) {
+                        return mapDomain(input, function (string) {
+                            return regexNonASCII.test(string)
+                                ? 'xn--' + encode(string)
+                                : string;
+                        });
+                    };
+                    const punycode = {
+                        'version': '2.3.1',
+                        'ucs2': {
+                            'decode': ucs2decode,
+                            'encode': ucs2encode
+                        },
+                        'decode': decode,
+                        'encode': encode,
+                        'toASCII': toASCII,
+                        'toUnicode': toUnicode
+                    };
+                    module.exports = punycode;
+                }(module));
+                return module.exports;
+            })();
+
+            const COMPREHENSIVE_CONFUSABLES_MAP = {
+                'а': { l: 'a', n: 'Cyrillic Small Letter A' }, 'А': { l: 'A', n: 'Cyrillic Capital Letter A' }, 'с': { l: 'c', n: 'Cyrillic Small Letter Es' }, 'С': { l: 'C', n: 'Cyrillic Capital Letter Es' },
+                'е': { l: 'e', n: 'Cyrillic Small Letter Ie' }, 'Е': { l: 'E', n: 'Cyrillic Capital Letter E' }, 'і': { l: 'i', n: 'Cyrillic Small Letter Byelorussian-Ukrainian I' }, 'І': { l: 'I', n: 'Cyrillic Capital Letter Byelorussian-Ukrainian I' },
+                'ј': { l: 'j', n: 'Cyrillic Small Letter Je' }, 'Ј': { l: 'J', n: 'Cyrillic Capital Letter Je' }, 'о': { l: 'o', n: 'Cyrillic Small Letter O' }, 'О': { l: 'O', n: 'Cyrillic Capital Letter O' },
+                'р': { l: 'p', n: 'Cyrillic Small Letter Er' }, 'Р': { l: 'P', n: 'Cyrillic Capital Letter Er' }, 'ѕ': { l: 's', n: 'Cyrillic Small Letter Dze' }, 'Ѕ': { l: 'S', n: 'Cyrillic Capital Letter Dze' },
+                'у': { l: 'y', n: 'Cyrillic Small Letter U' }, 'х': { l: 'x', n: 'Cyrillic Small Letter Ha' }, 'Х': { l: 'X', n: 'Cyrillic Capital Letter Ha' }, 'В': { l: 'B', n: 'Cyrillic Capital Letter Ve' },
+                'Н': { l: 'H', n: 'Cyrillic Capital Letter En' }, 'К': { l: 'K', n: 'Cyrillic Capital Letter Ka' }, 'М': { l: 'M', n: 'Cyrillic Capital Letter Em' }, 'Т': { l: 'T', n: 'Cyrillic Capital Letter Te' },
+                'Ү': { l: 'Y', n: 'Cyrillic Capital Ue' }, 'һ': { l: 'h', n: 'Cyrillic Small Shha' }, 'ԁ': { l: 'd', n: 'Cyrillic Small Komi De' }, 'ӏ': { l: 'l', n: 'Cyrillic Small Palochka' }, 'п': { l: 'n', n: 'Cyrillic Small Pe' },
+                'α': { l: 'a', n: 'Greek Small Letter Alpha' }, 'Α': { l: 'A', n: 'Greek Capital Letter Alpha' }, 'β': { l: 'b', n: 'Greek Small Letter Beta' }, 'Β': { l: 'B', n: 'Greek Capital Letter Beta' },
+                'ε': { l: 'e', n: 'Greek Small Letter Epsilon' }, 'Ε': { l: 'E', n: 'Greek Capital Letter Epsilon' }, 'η': { l: 'n', n: 'Greek Small Letter Eta' }, 'Η': { l: 'H', n: 'Greek Capital Letter Eta' },
+                'ι': { l: 'i', n: 'Greek Small Letter Iota' }, 'Ι': { l: 'I', n: 'Greek Capital Letter Iota' }, 'κ': { l: 'k', n: 'Greek Small Letter Kappa' }, 'Κ': { l: 'K', n: 'Greek Capital Letter Kappa' },
+                'μ': { l: 'u', n: 'Greek Small Letter Mu' }, 'Μ': { l: 'M', n: 'Greek Capital Letter Mu' }, 'ν': { l: 'v', n: 'Greek Small Letter Nu' }, 'Ν': { l: 'N', n: 'Greek Capital Letter Nu' },
+                'ο': { l: 'o', n: 'Greek Small Letter Omicron' }, 'Ο': { l: 'O', n: 'Greek Capital Letter Omicron' }, 'ρ': { l: 'p', n: 'Greek Small Letter Rho' }, 'Ρ': { l: 'P', n: 'Greek Capital Letter Rho' },
+                'τ': { l: 't', n: 'Greek Small Letter Tau' }, 'Τ': { l: 'T', n: 'Greek Capital Letter Tau' }, 'υ': { l: 'u', n: 'Greek Small Letter Upsilon' }, 'Υ': { l: 'Y', n: 'Greek Capital Letter Upsilon' },
+                'χ': { l: 'x', n: 'Greek Small Letter Chi' }, 'Χ': { l: 'X', n: 'Greek Capital Letter Chi' }, 'γ': { l: 'y', n: 'Greek Small Letter Gamma' }, 'Ζ': { l: 'Z', n: 'Greek Capital Letter Zeta' },
+                '—': { l: '-', n: 'Em Dash' }, '–': { l: '-', n: 'En Dash' }, '‐': { l: '-', n: 'Hyphen' }, '‑': { l: '-', n: 'Non-Breaking Hyphen' }, '‒': { l: '-', n: 'Figure Dash' }, '―': { l: '-', n: 'Horizontal Bar' },
+                '⁄': { l: '/', n: 'Fraction Slash' }, '∕': { l: '/', n: 'Division Slash' }, '’': { l: '\'', n: 'Right Single Quotation Mark' }, '‘': { l: '\'', n: 'Left Single Quotation Mark' }, '`': { l: '\'', n: 'Grave Accent' },
+                '”': { l: '"', n: 'Right Double Quotation Mark' }, '“': { l: '"', n: 'Left Double Quotation Mark' }, '․': { l: '.', n: 'One Dot Leader' }, '﹒': { l: '.', n: 'Small Full Stop' }, '．': { l: '.', n: 'Fullwidth Full Stop' },
+                '‚': { l: ',', n: 'Single Low-9 Quotation Mark' }, '，': { l: ',', n: 'Fullwidth Comma' }, '：': { l: ':', n: 'Fullwidth Colon' }, ';': { l: ';', n: 'Greek Question Mark' },
+                '（': { l: '(', n: 'Fullwidth Left Parenthesis' }, '）': { l: ')', n: 'Fullwidth Right Parenthesis' }, '∣': { l: '|', n: 'Divides' }, 'ǀ': { l: 'l', n: 'Latin Letter Dental Click' },
+                'ǃ': { l: '!', n: 'Latin Letter Retroflex Click' }, '−': { l: '-', n: 'Minus Sign' }, '＋': { l: '+', n: 'Fullwidth Plus Sign' }, '＝': { l: '=', n: 'Fullwidth Equals Sign' },
+                'ɡ': { l: 'g', n: 'Latin Small Letter Script G' }, 'ɩ': { l: 'l', n: 'Latin Small Letter Iota' }, 'օ': { l: 'o', n: 'Armenian Small Letter Oh' }, 'Օ': { l: 'O', n: 'Armenian Capital Oh' },
+                'ե': { l: 't', n: 'Armenian Small Letter Ech' }, 'զ': { l: 'q', n: 'Armenian Small Letter Za' }, 'ս': { l: 'u', n: 'Armenian Small Letter Seh' }, 'ν': { l: 'v', n: 'Armenian Small Letter Vew' },
+                'ר': { l: 'ר', n: 'Hebrew Letter Resh' }, 'ו': { l: 'ו', n: 'Hebrew Letter Vav' }, 'ן': { l: 'ן', n: 'Hebrew Letter Final Nun' }, 'ס': { l: 'ס', n: 'Hebrew Letter Samekh' }, 'ם': { l: 'ם', n: 'Hebrew Letter Final Mem' },
+                'ᛁ': { l: 'l', n: 'Runic Letter Isaz' }, 'ø': { l: 'o', n: 'Latin Small Letter O with Stroke' }, 'Ø': { l: 'O', n: 'Latin Capital Letter O with Stroke' }, '¹': { l: '1', n: 'Superscript One' }, '²': { l: '2', n: 'Superscript Two' },
+                '³': { l: '3', n: 'Superscript Three' }, '⁰': { l: '0', n: 'Superscript Zero' }, '₄': { l: '4', n: 'Subscript Four' }, '₅': { l: '5', n: 'Subscript Five' }, '₆': { l: '6', n: 'Subscript Six' },
+                '₇': { l: '7', n: 'Subscript Seven' }, '₈': { l: '8', n: 'Subscript Eight' }, '₉': { l: '9', n: 'Subscript Nine' }, '₀': { l: '0', n: 'Subscript Zero' }, 'À': { l: 'A', n: 'Latin Capital Letter A with Grave' },
+                'Á': { l: 'A', n: 'Latin Capital Letter A with Acute' }, 'Â': { l: 'A', n: 'Latin Capital Letter A with Circumflex' }, 'Ã': { l: 'A', n: 'Latin Capital Letter A with Tilde' }, 'Ä': { l: 'A', n: 'Latin Capital Letter A with Diaeresis' },
+                'Å': { l: 'A', n: 'Latin Capital Letter A with Ring Above' }, 'Ç': { l: 'C', n: 'Latin Capital Letter C with Cedilla' }, 'È': { l: 'E', n: 'Latin Capital Letter E with Grave' }, 'É': { l: 'E', n: 'Latin Capital Letter E with Acute' },
+                'Ê': { l: 'E', n: 'Latin Capital Letter E with Circumflex' }, 'Ë': { l: 'E', n: 'Latin Capital Letter E with Diaeresis' }, 'Ì': { l: 'I', n: 'Latin Capital Letter I with Grave' }, 'Í': { l: 'I', n: 'Latin Capital Letter I with Acute' },
+                'Î': { l: 'I', n: 'Latin Capital Letter I with Circumflex' }, 'Ï': { l: 'I', n: 'Latin Capital Letter I with Diaeresis' }, 'Ñ': { l: 'N', n: 'Latin Capital Letter N with Tilde' }, 'Ò': { l: 'O', n: 'Latin Capital Letter O with Grave' },
+                'Ó': { l: 'O', n: 'Latin Capital Letter O with Acute' }, 'Ô': { l: 'O', n: 'Latin Capital Letter O with Circumflex' }, 'Õ': { l: 'O', n: 'Latin Capital Letter O with Tilde' }, 'Ö': { l: 'O', n: 'Latin Capital Letter O with Diaeresis' },
+                'Ú': { l: 'U', n: 'Latin Capital Letter U with Acute' }, 'Û': { l: 'U', n: 'Latin Capital Letter U with Circumflex' }, 'Ü': { l: 'U', n: 'Latin Capital Letter U with Diaeresis' }, 'Ý': { l: 'Y', n: 'Latin Capital Letter Y with Acute' }
+            };
+
+            const EXAMPLES = [
+                { label: 'github.com', value: 'gіthub.com' }, { label: 'gitlab.com', value: 'gіtӏab.com' },
+                { label: 'huggingface.co', value: 'huɡɡіnɡfасе.co' }, { label: 'apple.com', value: 'аррle.com' },
+                { label: 'paypal.com', value: 'раураӏ.com' }
+            ];
+
+            const form = document.getElementById('inspector-form');
+            const inputElement = document.getElementById('input-string');
+            const resultSection = document.getElementById('result-section');
+            const examplesContainer = document.getElementById('example-buttons-container');
+
+            function initializeExamples() {
+                examplesContainer.innerHTML = '';
+                EXAMPLES.forEach(example => {
+                    const button = document.createElement('button');
+                    button.className = 'example-button';
+                    button.textContent = example.label;
+                    button.dataset.value = example.value;
+                    examplesContainer.appendChild(button);
+                });
+                examplesContainer.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('example-button')) {
+                        const value = event.target.dataset.value;
+                        inputElement.value = value;
+                        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        inputElement.focus();
+                    }
+                });
+            }
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const analysis = analyzeString(inputElement.value);
+                renderResults(analysis);
+            });
+
+            function analyzeString(input) {
+                if (typeof input !== 'string' || input.length === 0) {
+                    return { original: input || '', normalized: '', confusables: [], riskScore: 0, punycode: '' };
+                }
+
+                const decodedInput = punycode.toUnicode(input);
+                const confusables = [];
+                let normalized = '';
+                let hasNonAscii = false;
+                const characters = Array.from(decodedInput);
+
+                characters.forEach((char, i) => {
+                    if (char.codePointAt(0) > 127) hasNonAscii = true;
+                    const confusableData = COMPREHENSIVE_CONFUSABLES_MAP[char];
+                    if (confusableData) {
+                        confusables.push({ char, hex: `U+${char.codePointAt(0).toString(16).padStart(4, '0').toUpperCase()}`, index: i, looksLike: confusableData.l, name: confusableData.n });
+                        normalized += confusableData.l;
+                    } else {
+                        normalized += char;
+                    }
+                });
+
+                const riskScore = characters.length > 0 ? (confusables.length / characters.length) * 100 : 0;
+                const punycodeValue = hasNonAscii ? punycode.toASCII(decodedInput) : decodedInput;
+
+                return { original: decodedInput, normalized, confusables, riskScore: Math.round(riskScore), punycode: punycodeValue };
+            }
+
+            function renderResults(analysis) {
+                resultSection.innerHTML = '';
+                if (!analysis.original) return;
+                if (analysis.confusables.length === 0) {
+                    renderSafeResult(analysis.original);
+                } else {
+                    resultSection.appendChild(createSummaryCard(analysis));
+                    resultSection.appendChild(createDetailsCard(analysis));
+                    resultSection.appendChild(createDiffCard(analysis));
+                }
+            }
+
+            function renderSafeResult(originalString) {
+                const card = document.createElement('div');
+                card.className = 'card safe-result-card';
+                card.innerHTML = `
+                <div class="safe-result-content">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
+                    <h2>No Suspicious Characters Found</h2>
+                    <p class="analyzed-string">${escapeHtml(originalString)}</p>
+                </div>`;
+                resultSection.appendChild(card);
+            }
+
+            function createSummaryCard(analysis) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                const riskLevel = getRiskLevel(analysis.riskScore);
+                const riskDescription = `(${analysis.confusables.length} of ${Array.from(analysis.original).length} characters are deceptive)`;
+
+                let punycodeHTML = '';
+                if (analysis.punycode !== analysis.original) {
+                    punycodeHTML = `
+                    <div>
+                        <h3 class="card-subtitle">IDN Punycode Representation</h3>
+                        <div class="punycode-display">
+                            <code>${escapeHtml(analysis.punycode)}</code>
+                        </div>
+                    </div>`;
+                }
+
+                card.innerHTML = `
+                <div class="card-header"><h2 class="card-title">Analysis Summary</h2></div>
+                <div class="card-content">
+                    <div class="risk-score-wrapper">
+                        <span class="risk-score" data-risk-level="${riskLevel}">${analysis.riskScore}%</span>
+                        <span class="risk-description">Risk Score ${riskDescription}</span>
+                    </div>
+                    ${punycodeHTML}
+                    <div>
+                        <h3 class="card-subtitle">Highlighted Input</h3>
+                        <div class="highlighted-string"></div>
+                    </div>
+                </div>`;
+
+                const highlightedContainer = card.querySelector('.highlighted-string');
+                Array.from(analysis.original).forEach((char, index) => {
+                    const confusable = analysis.confusables.find(c => c.index === index);
+                    if (confusable) {
+                        const span = document.createElement('span');
+                        span.className = 'confusable-char';
+                        span.textContent = char;
+                        span.setAttribute('tabindex', '0');
+                        span.setAttribute('role', 'tooltip');
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'tooltip';
+                        tooltip.textContent = `'${confusable.char}' (${confusable.name}) looks like '${confusable.looksLike}'`;
+                        span.appendChild(tooltip);
+                        highlightedContainer.appendChild(span);
+                    } else {
+                        highlightedContainer.appendChild(document.createTextNode(char));
+                    }
+                });
+                return card;
+            }
+
+            function createDetailsCard(analysis) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                <div class="card-header"><h2 class="card-title">Threat Analysis</h2></div>
+                <div class="card-content">
+                    <div class="danger-alert">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"></path></svg>
+                        <div class="danger-alert-text">
+                            <strong>Warning: Deceptive Characters Detected</strong>
+                            <p>This input uses characters that mimic standard letters. This is a common technique for phishing attacks and creating misleading links.</p>
+                        </div>
+                    </div>
+                    <table class="confusables-table">
+                        <thead><tr><th>Deceptive</th><th>Details</th><th>Looks Like</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>`;
+                const tbody = card.querySelector('tbody');
+                analysis.confusables.forEach(c => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td class="char-cell">${escapeHtml(c.char)}</td><td>${escapeHtml(c.name)}<br><span class="u-code">${escapeHtml(c.hex)}</span></td><td class="char-cell">${escapeHtml(c.looksLike)}</td>`;
+                    tbody.appendChild(row);
+                });
+                return card;
+            }
+
+            function createDiffCard(analysis) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                <div class="card-header"><h2 class="card-title">Safe Conversion</h2></div>
+                <div class="card-content diff-view">
+                    <div>
+                        <h3 class="card-subtitle">Original (Deceptive) Input</h3>
+                        <pre class="diff-original"></pre>
+                    </div>
+                    <div>
+                        <h3 class="card-subtitle">Safe (Normalized) Version</h3>
+                        <pre class="diff-normalized"></pre>
+                    </div>
+                </div>`;
+                card.querySelector('.diff-original').textContent = analysis.original;
+                card.querySelector('.diff-normalized').textContent = analysis.normalized;
+                return card;
+            }
+
+            function getRiskLevel(score) {
+                if (score > 50) return 'high';
+                if (score > 20) return 'medium';
+                if (score > 0) return 'low';
+                return 'none';
+            }
+
+            function escapeHtml(str) {
+                const p = document.createElement("p");
+                p.textContent = str;
+                return p.innerHTML;
+            }
+
+            initializeExamples();
+        })();
+    </script>
+</body>
+
+</html>
